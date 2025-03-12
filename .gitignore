@@ -1,0 +1,7 @@
+# Игнорируем базу данных Docker
+.docker/db_data/
+.docker/.env
+
+# Игнорируем временные файлы
+*.sock
+*.log

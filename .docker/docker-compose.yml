@@ -1,0 +1,73 @@
+version: '3.9'
+
+services:
+
+# Back
+  infotek-nginx:
+    image: nginx:1.25.2-alpine3.18
+    restart: unless-stopped
+    tty: true
+    volumes:
+      - ./back/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./back/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    ports:
+      - "${FORWARD_PORT}:${LISTENING_PORT}/tcp"
+    stop_grace_period: 1s
+    networks:
+      - test-network
+    depends_on:
+      - infotek-back
+      - infotek-mysql
+
+  infotek-back:
+    build:
+      context: .
+      dockerfile: ./back/Dockerfile
+      args:
+        - "DOCKER_USER"
+        - "DOCKER_USER_UID"
+        - "DOCKER_USER_GID"
+        - "DOCKER_HOME"
+    environment:
+      - "HOME=${DOCKER_HOME}"
+      - "DOCKER_USER"
+      - "DOCKER_USER_UID"
+      - "DOCKER_USER_GID"
+      - "PS1"
+    container_name: infotek
+    restart: unless-stopped
+    working_dir: /var/www/html
+    volumes:
+      - ../infotek:/var/www/html
+    networks:
+      - test-network
+    depends_on:
+      - infotek-mysql
+
+  # db
+  infotek-mysql:
+    image: mysql:8.0.30
+    container_name: mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: "${DB_DATABASE}"
+      MYSQL_USER: "${DB_USERNAME}"
+      MYSQL_PASSWORD: "${DB_PASSWORD}"
+      MYSQL_ROOT_PASSWORD: "${DB_PASSWORD}"
+    command: --default-authentication-plugin=mysql_native_password
+    volumes:
+      - ./db_data:/var/lib/mysql
+      - ./config/my.cnf:/etc/my.cnf
+    ports:
+      - "${FORWARD_DB_PORT}:${DB_PORT}/tcp"
+    networks:
+      - test-network
+
+
+networks:
+  test-network:
+    name: test-network
+    driver: bridge
+
+#volumes:
+#  db_data: {}
