@@ -63,18 +63,15 @@ class BookService
     public function prepareBook(array $data): Book
     {
         $book = new Book();
-        $book->uuid = self::uuid();
-        $book->title = $data['title'] ?? null;
-        $book->year = $data['year'] ?? null;
-        $book->isbn = $data['isbn'] ?? null;
-        $book->description = $data['description'] ?? null;
-
-        if ($book->isbn !== null && BookRepository::findByData(['isbn' => $book->isbn])) {
-            throw new Exception('Книга с таким ISBN уже существует');
-        }
+        $book->uuid = $data['uuid'] ?? self::uuid();
+        $book->title = isset($data['title']) ? trim($data['title']) : null;
+        $book->year = isset($data['year']) ? (int)$data['year'] : null;
+        $book->isbn = isset($data['isbn']) ? trim($data['isbn']) : null;
+        $book->description = isset($data['description']) ? trim($data['description']) : null;
+        $book->authors = $data['authors'] ?? [];
 
         if (!$book->validate()) {
-            throw new Exception('Неверные данные');
+            throw new Exception('Неверные данные: ' . json_encode($book->errors));
         }
 
         return $book;
@@ -83,23 +80,23 @@ class BookService
     /**
      * Добавление книги
      *
-     * @throws ForbiddenHttpException
-     * @throws NotFoundHttpException|Exception
+     * @throws NotFoundHttpException|
+     * @throws Exception
      */
-    public function setBook(Book $book, array $authorUuids): bool
+    public function setBook(Book $book): bool
     {
-        if (!Yii::$app->user->can('manageBooks')) {
-            throw new ForbiddenHttpException('Недостаточно прав для добавления книги');
-        }
-
         // toDo если у книги подразумевается несколько картинок, сделать отдельную таблицу
 
+        if ($book->isbn !== null && BookRepository::findByData(['isbn' => $book->isbn, 'deleted_at' => null])) {
+            throw new Exception('Книга с таким ISBN уже существует');
+        }
+
         try {
-            $setBook = BookRepository::setBook($book);
+            BookRepository::setBook($book);
             $authorService = new AuthorService();
 
-            if ($authorUuids) {
-                foreach ($authorUuids as $authorUuid) {
+            if ($book->authors) {
+                foreach ($book->authors as $authorUuid) {
 
                     $authorData = $authorService->findOne($authorUuid);
                     if (!$authorData) {
@@ -132,6 +129,25 @@ class BookService
         }
 
         Yii::$app->session->setFlash('success', 'Книга успешно добавлена!');
+
+        return true;
+    }
+
+    /**
+     * Обновление книги
+     *
+     */
+    public function updateBook(Book $book): bool
+    {
+        try {
+            BookRepository::updateBook($book);
+            $authorService = new AuthorService();
+            $authorService->updateAuthorByBook($book->uuid, $book->authors);
+        } catch (Exception $e) {
+            Yii::error("Ошибка в updateBook: " . $e->getMessage(), __METHOD__);
+
+            return false;
+        }
 
         return true;
     }

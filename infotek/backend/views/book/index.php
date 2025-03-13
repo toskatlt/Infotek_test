@@ -12,6 +12,7 @@ use yii\web\View;
 $this->title = 'Книги';
 $this->params['breadcrumbs'][] = $this->title;
 $this->params['breadcrumbs'][] = ['label' => 'Добавить книгу', 'url' => ['book/create']];
+$this->params['breadcrumbs'][] = ['label' => 'Удалить книгу', 'url' => ['book/delete']];
 
 $this->registerCss(".book-cover { width: 50px; height: auto; }");
 ?>
@@ -21,7 +22,7 @@ $this->registerCss(".book-cover { width: 50px; height: auto; }");
     <tr>
         <th>№</th>
         <th>Название книги</th>
-        <th>Автор</th>
+        <th>Авторы</th>
         <th>Обложка</th>
     </tr>
     </thead>

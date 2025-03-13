@@ -9,12 +9,11 @@ use yii\db\Exception;
 class Book extends Model
 {
     public string $uuid;
-    public ?string $title = null;
-    public ?int $year = null;
-    public ?string $isbn = null;
-    public ?string $description = null;
-
-    public ?array $autors = [];
+    public string|null $title = null;
+    public int|null $year = null;
+    public string|null $isbn = null;
+    public string|null $description = null;
+    public array $authors = [];
 
     public function rules(): array
     {
@@ -33,11 +32,13 @@ class Book extends Model
         return $this->uuid;
     }
 
-    /**
-     * @throws Exception
-     */
     public function getAuthors(): array
     {
         return (new AuthorService())->getAuthorsByBookUuid($this->getUuid());
+    }
+
+    public function setAuthors(array $authors): void
+    {
+        $this->authors = $authors;
     }
 }

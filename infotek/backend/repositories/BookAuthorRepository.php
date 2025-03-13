@@ -32,4 +32,19 @@ class BookAuthorRepository extends BaseRepository
             ->bindValue(':author_uuid', $authorUuid)
             ->execute();
     }
+
+    /**
+     * Удаление связей автора и книги
+     *
+     * @throws Exception
+     */
+    public static function deleteAuthorByBook(string $bookUuid): bool
+    {
+        return Yii::$app->db->createCommand('
+            DELETE FROM ' . self::TABLE_NAME . ' 
+            WHERE book_uuid = :book_uuid
+        ')
+            ->bindValue(':book_uuid', $bookUuid)
+            ->execute();
+    }
 }

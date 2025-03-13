@@ -7,18 +7,22 @@ use app\service\BookService;
 use yii\db\Exception;
 use yii\web\ForbiddenHttpException;
 use yii\web\NotFoundHttpException;
-use yii\web\Response;
-use app\models\Book;
 use Yii;
 
 class BookController extends BaseController
 {
     private BookService $bookService;
+    private AuthorService $authorService;
 
-    public function __construct($id, $module, BookService $BookService, $config = [])
+    public function __construct(
+        $id,
+        $module,
+        AuthorService $AuthorService,
+        BookService $BookService,
+        $config = [])
     {
         parent::__construct($id, $module, $config);
-
+        $this->authorService = $AuthorService;
         $this->bookService = $BookService;
     }
 
@@ -56,15 +60,17 @@ class BookController extends BaseController
      */
     public function actionCreate(): string
     {
+        if (!Yii::$app->user->can('manageBooks')) {
+            throw new ForbiddenHttpException('Недостаточно прав для добавления книги');
+        }
+
         if (Yii::$app->request->isPost) {
             $data = Yii::$app->request->post();
             $book = $this->bookService->prepareBook($data);
-            $authors = $data['authors'] ?? [];
-
-            $this->bookService->setBook($book, $authors);
+            $this->bookService->setBook($book);
         }
 
-        $authors = (new AuthorService())->findAll();
+        $authors = $this->authorService->findAll();
 
         return $this->render('create', [
             'authors' => $authors,
@@ -74,11 +80,56 @@ class BookController extends BaseController
     /**
      * @throws Exception
      * @throws NotFoundHttpException
+     * @throws ForbiddenHttpException
      */
-    public function actionDelete(string $uuid): Response
+    public function actionUpdate(string $uuid): string
     {
-        $result = $this->bookService->deleteBook($uuid);
+        if (!Yii::$app->user->can('manageBooks')) {
+            throw new ForbiddenHttpException('Недостаточно прав для редактирования книги');
+        }
 
-        return $this->jsonResponse(['success' => $result]);
+        if (Yii::$app->request->isPost) {
+            $data = Yii::$app->request->post();
+
+            if (!$this->bookService->findOne($uuid)) {
+                throw new NotFoundHttpException('Книга не найдена');
+            }
+            $bookData = $this->bookService->prepareBook($data);
+            $this->bookService->updateBook($bookData);
+        }
+
+        $book = $this->bookService->findOne($uuid);
+        $book['authors'] = $this->authorService->getAuthorsByBookUuid($uuid);
+        $authors = $this->authorService->findAll();
+
+        return $this->render('update', [
+            'book' => $book,
+            'authors' => $authors
+        ]);
+    }
+
+    /**
+     * @throws Exception
+     * @throws NotFoundHttpException
+     * @throws ForbiddenHttpException
+     */
+    public function actionDelete(): string
+    {
+        if (!Yii::$app->user->can('manageBooks')) {
+            throw new ForbiddenHttpException('Недостаточно прав для удаления книги');
+        }
+
+        if (Yii::$app->request->isPost) {
+            $data = Yii::$app->request->post();
+            if (!$data['uuid']) {
+                throw new NotFoundHttpException('Uuid не передан');
+            }
+
+            $this->bookService->deleteBook($data['uuid']);
+        }
+
+        return $this->render('delete', [
+            'books' => $this->bookService->findAllBooksAndAuthors()
+        ]);
     }
 }

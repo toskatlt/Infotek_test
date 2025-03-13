@@ -10,6 +10,7 @@ services:
     volumes:
       - ./back/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./back/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./../infotek/backend/web:/var/www/html/backend/web
     ports:
       - "${FORWARD_PORT}:${LISTENING_PORT}/tcp"
     stop_grace_period: 1s

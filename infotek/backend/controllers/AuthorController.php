@@ -5,8 +5,6 @@ namespace app\controllers;
 use app\service\AuthorService;
 use app\service\SubscriptionService;
 use Yii;
-use yii\data\ActiveDataProvider;
-use yii\data\ArrayDataProvider;
 use yii\db\Exception;
 use yii\web\Response;
 
